@@ -6,7 +6,7 @@ import { Field, Form, Formik } from 'formik'
 import * as Yup from 'yup'
 import { Input, Select, DatePicker, Checkbox } from '@/components/ui'
 import { AdaptableCard } from '@/components/shared'
-import { apiGetProduct, apiUpdateProduct } from '@/services/ProductService'
+import { apiGetProductById, apiUpdateProduct } from '@/services/ProductService'
 import toast from '@/components/ui/toast'
 import Notification from '@/components/ui/Notification'
 import { useQuery } from '@tanstack/react-query'
@@ -59,7 +59,7 @@ const ProductEdit = () => {
     useEffect(() => {
         const fetchProduct = async () => {
             try {
-                const response = await apiGetProduct(id!)
+                const response = await apiGetProductById(id!)
                 setInitialValues({
                     name: response.data.data.name,
                     model: response.data.data.model,
