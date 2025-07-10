@@ -110,8 +110,8 @@ export const protectedRoutes = [
     },
     {
         key: 'productAssignments',
-        path: '/product-assignments',
-        component: lazy(() => import('@/views/products/ProductAssignments')),
+        path: '/assignments',
+        component: lazy(() => import('@/views/products/ProductAssignedList')),
         authority: [ADMIN,SUPERADMIN],
     },
     {
@@ -126,7 +126,26 @@ export const protectedRoutes = [
         component: lazy(() => import('@/views/products/AssignmentList')),
         authority: [ADMIN,SUPERADMIN],
         
+    },{
+        key: 'departmentList',
+        path: '/departments',
+        component: lazy(() => import('@/views/departments/DepartmentList')),
+        authority: [ADMIN,SUPERADMIN],
+        
+    },{
+        key: 'departmentCreate',
+        path: '/departments/create',
+        component: lazy(() => import('@/views/departments/DepartmentCreate')),
+        authority: [ADMIN,SUPERADMIN],
+        
+    },{
+        key: 'departmentEdit',
+        path: '/departments/edit/:id?',
+        component: lazy(() => import('@/views/departments/DepartmentEdit')),
+        authority: [ADMIN,SUPERADMIN],
+        
     },
+
     /** Example purpose only, please remove */
     {
         key: 'singleMenuItem',

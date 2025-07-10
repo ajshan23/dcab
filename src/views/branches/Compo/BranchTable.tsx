@@ -70,13 +70,13 @@ const BranchTable = () => {
                     <div className="flex justify-end text-lg">
                         <span
                             className={`cursor-pointer p-2 hover:${textTheme}`}
-                            onClick={() => navigate(`/branches/view/${props.row.original._id}`)}
+                            onClick={() => navigate(`/branches/view/${props.row.original.id}`)}
                         >
                             <HiOutlineEye />
                         </span>
                         <span
                             className={`cursor-pointer p-2 hover:${textTheme}`}
-                            onClick={() => navigate(`/branches/edit/${props.row.original._id}`)}
+                            onClick={() => navigate(`/branches/edit/${props.row.original.id}`)}
                         >
                             <HiOutlinePencil />
                         </span>

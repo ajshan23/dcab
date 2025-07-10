@@ -6,7 +6,8 @@ import { Link } from 'react-router-dom'
 import classNames from 'classnames'
 import { HiOutlineLogout, HiOutlineUser } from 'react-icons/hi'
 import type { CommonProps } from '@/@types/common'
-import type { JSX } from 'react'
+import { useEffect, useState, type JSX } from 'react'
+import { apiGetMe } from '@/services/UserService'
 
 type DropdownList = {
     label: string
@@ -17,14 +18,26 @@ type DropdownList = {
 const dropdownItemList: DropdownList[] = []
 
 const _UserDropdown = ({ className }: CommonProps) => {
-    const { signOut } = useAuth()
 
+    const { signOut } = useAuth()
+    const [user,setUser]=useState({})
+    const fetchUser=async () => {
+        const res=await apiGetMe();
+        console.log("res from ",res);
+      if (res.data) {
+        setUser(res.data.data)
+      }
+        
+    }
+    useEffect(()=>{
+        fetchUser()
+    },[])
     const UserAvatar = (
         <div className={classNames(className, 'flex items-center gap-2')}>
             <Avatar size={32} shape="circle" icon={<HiOutlineUser />} />
             <div className="hidden md:block">
-                <div className="text-xs capitalize">admin</div>
-                <div className="font-bold">User01</div>
+                <div className="text-xs capitalize">{user?.role ==="super_admin"?"super admin":(user?.role==="admin"?"admin":"user")}</div>
+                <div className="font-bold">{user?.username}</div>
             </div>
         </div>
     )
@@ -41,9 +54,9 @@ const _UserDropdown = ({ className }: CommonProps) => {
                         <Avatar shape="circle" icon={<HiOutlineUser />} />
                         <div>
                             <div className="font-bold text-gray-900 dark:text-gray-100">
-                                User01
+                                {user?.username}
                             </div>
-                            <div className="text-xs">user01@mail.com</div>
+                            
                         </div>
                     </div>
                 </Dropdown.Item>
@@ -71,7 +84,10 @@ const _UserDropdown = ({ className }: CommonProps) => {
                 <Dropdown.Item
                     eventKey="Sign Out"
                     className="gap-2"
-                    onClick={signOut}
+                    onClick={()=>{
+                        localStorage.clear();
+                        window.location.reload()
+                    }}
                 >
                     <span className="text-xl opacity-50">
                         <HiOutlineLogout />

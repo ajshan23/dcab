@@ -4,6 +4,14 @@ import {
     HiOutlineTemplate,
     HiOutlineViewGridAdd,
     HiOutlineHome,
+    HiOutlineUsers,
+    HiOutlineOfficeBuilding,
+    HiOutlineTag,
+    HiOutlineUser,
+    HiOutlineCube,
+    HiOutlineClipboardList,
+    HiOutlineCollection,
+    HiOutlineChartSquareBar
 } from 'react-icons/hi'
 import type { JSX } from 'react'
 
@@ -15,6 +23,15 @@ const navigationIcon: NavigationIcons = {
     collapseMenu: <HiOutlineTemplate />,
     groupSingleMenu: <HiOutlineDesktopComputer />,
     groupCollapseMenu: <HiOutlineColorSwatch />,
+    // New icons for your navigation items
+    users: <HiOutlineUsers />,
+    branches: <HiOutlineOfficeBuilding />,
+    categories: <HiOutlineTag />,
+    employees: <HiOutlineUser />,
+    products: <HiOutlineCube />,
+    assignments: <HiOutlineClipboardList />,
+    departments: <HiOutlineCollection />,
+    productAssignments: <HiOutlineChartSquareBar />
 }
 
 export default navigationIcon

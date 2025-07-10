@@ -37,6 +37,7 @@ function useAuth() {
     
             if (resp.success === true && resp.data?.token) {
                 const { token, user } = resp.data;
+          
                 
                 // Dispatch actions
                 dispatch(signInSuccess(token));

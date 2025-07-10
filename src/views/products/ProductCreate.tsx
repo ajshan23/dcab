@@ -11,6 +11,7 @@ import Notification from '@/components/ui/Notification';
 import { useQuery } from '@tanstack/react-query';
 import { apiGetCategories } from '@/services/CategoryService';
 import { apiGetBranches } from '@/services/BranchService';
+import { apiGetDepartments } from '@/services/DepartmentService';
 
 const validationSchema = Yup.object().shape({
   name: Yup.string()
@@ -19,21 +20,15 @@ const validationSchema = Yup.object().shape({
     .max(100, 'Too Long!'),
   model: Yup.string()
     .required('Model is required'),
-  serialNumber: Yup.string()
-    .required('Serial number is required'),
-  category: Yup.string()
+  categoryId: Yup.number()
     .required('Category is required'),
-  totalStock: Yup.number()
-    .required('Total stock is required')
-    .min(1, 'Must be at least 1'),
-  branch: Yup.string()
+  branchId: Yup.number()
     .required('Branch is required')
 });
 
 const ProductCreate = () => {
   const navigate = useNavigate();
 
-  // Fetch categories and branches with proper error handling
   const { 
     data: categoriesData, 
     isLoading: categoriesLoading,
@@ -52,28 +47,32 @@ const ProductCreate = () => {
     queryFn: () => apiGetBranches({ page: 1, limit: 100 })
   });
 
+  const { 
+    data: departmentsData, 
+    isLoading: departmentsLoading,
+    error: departmentsError 
+  } = useQuery({ 
+    queryKey: ['departments'],
+    queryFn: () => apiGetDepartments({ page: 1, limit: 100 })
+  });
+
   const handleSubmit = async (values: any, { setSubmitting }: any) => {
     setSubmitting(true);
     try {
-      // Prepare payload with proper types
       const payload = {
         name: values.name.trim(),
         model: values.model.trim(),
-        serialNumber: values.serialNumber.trim(),
-        category: values.category,
-        branch: values.branch,
-        totalStock: Number(values.totalStock),
-        availableStock: Number(values.totalStock), // Initialize same as totalStock
+        categoryId: Number(values.categoryId),
+        branchId: Number(values.branchId),
+        departmentId: values.departmentId ? Number(values.departmentId) : undefined,
         warrantyDate: values.warrantyDate || undefined,
         complianceStatus: Boolean(values.complianceStatus),
         notes: values.notes?.trim() || undefined
       };
-  
-      console.log('Submitting product:', payload); // Debug log
-  
+
       const response = await apiCreateProduct(payload);
       
-      if (response.success) {
+      if (response.status === 201) {
         toast.push(
           <Notification title="Success" type="success">
             Product created successfully
@@ -113,10 +112,9 @@ const ProductCreate = () => {
         initialValues={{
           name: '',
           model: '',
-          serialNumber: '',
-          category: '',
-          totalStock: 1,
-          branch: '',
+          categoryId: '',
+          branchId: '',
+          departmentId: '',
           warrantyDate: null,
           complianceStatus: false,
           notes: ''
@@ -125,15 +123,14 @@ const ProductCreate = () => {
         onSubmit={handleSubmit}
       >
         {({ touched, errors, isSubmitting, values, setFieldValue }) => {
-          // Extract data arrays from responses
           const categories = categoriesData?.data?.data || [];
           const branches = branchesData?.data?.data || [];
+          const departments = departmentsData?.data?.data || [];
 
           return (
             <Form>
               <FormContainer>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Product Name */}
                   <FormItem
                     label="Product Name"
                     invalid={!!errors.name && touched.name}
@@ -148,7 +145,6 @@ const ProductCreate = () => {
                     />
                   </FormItem>
 
-                  {/* Model */}
                   <FormItem
                     label="Model"
                     invalid={!!errors.model && touched.model}
@@ -163,39 +159,23 @@ const ProductCreate = () => {
                     />
                   </FormItem>
 
-                  {/* Serial Number */}
-                  <FormItem
-                    label="Serial Number"
-                    invalid={!!errors.serialNumber && touched.serialNumber}
-                    errorMessage={errors.serialNumber as string}
-                  >
-                    <Field
-                      type="text"
-                      autoComplete="off"
-                      name="serialNumber"
-                      placeholder="Serial number"
-                      component={Input}
-                    />
-                  </FormItem>
-
-                  {/* Category */}
                   <FormItem
                     label="Category"
-                    invalid={!!errors.category && touched.category}
-                    errorMessage={errors.category as string}
+                    invalid={!!errors.categoryId && touched.categoryId}
+                    errorMessage={errors.categoryId as string}
                   >
                     <Select
                       placeholder={categoriesLoading ? "Loading..." : "Select Category"}
                       loading={categoriesLoading}
                       options={categories.map((c: any) => ({
-                        value: c._id,
+                        value: c.id,
                         label: c.name
                       }))}
-                      value={values.category ? {
-                        value: values.category,
-                        label: categories.find((c: any) => c._id === values.category)?.name
+                      value={values.categoryId ? {
+                        value: values.categoryId,
+                        label: categories.find((c: any) => c.id === values.categoryId)?.name
                       } : null}
-                      onChange={(option: any) => setFieldValue('category', option?.value)}
+                      onChange={(option: any) => setFieldValue('categoryId', option?.value)}
                     />
                     {categoriesError && (
                       <div className="text-red-500 text-sm mt-1">
@@ -204,40 +184,23 @@ const ProductCreate = () => {
                     )}
                   </FormItem>
 
-                  {/* Total Stock */}
-                  <FormItem
-                    label="Total Stock"
-                    invalid={!!errors.totalStock && touched.totalStock}
-                    errorMessage={errors.totalStock as string}
-                  >
-                    <Field
-                      type="number"
-                      autoComplete="off"
-                      name="totalStock"
-                      placeholder="Total stock"
-                      component={Input}
-                      min={1}
-                    />
-                  </FormItem>
-
-                  {/* Branch */}
                   <FormItem
                     label="Branch"
-                    invalid={!!errors.branch && touched.branch}
-                    errorMessage={errors.branch as string}
+                    invalid={!!errors.branchId && touched.branchId}
+                    errorMessage={errors.branchId as string}
                   >
                     <Select
                       placeholder={branchesLoading ? "Loading..." : "Select Branch"}
                       loading={branchesLoading}
                       options={branches.map((b: any) => ({
-                        value: b._id,
+                        value: b.id,
                         label: b.name
                       }))}
-                      value={values.branch ? {
-                        value: values.branch,
-                        label: branches.find((b: any) => b._id === values.branch)?.name
+                      value={values.branchId ? {
+                        value: values.branchId,
+                        label: branches.find((b: any) => b.id === values.branchId)?.name
                       } : null}
-                      onChange={(option: any) => setFieldValue('branch', option?.value)}
+                      onChange={(option: any) => setFieldValue('branchId', option?.value)}
                     />
                     {branchesError && (
                       <div className="text-red-500 text-sm mt-1">
@@ -246,7 +209,62 @@ const ProductCreate = () => {
                     )}
                   </FormItem>
 
-                  {/* Other fields... */}
+                  <FormItem
+                    label="Department"
+                  >
+                    <Select
+                      placeholder={departmentsLoading ? "Loading..." : "Select Department (Optional)"}
+                      loading={departmentsLoading}
+                      options={departments.map((d: any) => ({
+                        value: d.id,
+                        label: d.name
+                      }))}
+                      value={values.departmentId ? {
+                        value: values.departmentId,
+                        label: departments.find((d: any) => d.id === values.departmentId)?.name
+                      } : null}
+                      onChange={(option: any) => setFieldValue('departmentId', option?.value)}
+                      isClearable
+                    />
+                    {departmentsError && (
+                      <div className="text-red-500 text-sm mt-1">
+                        Failed to load departments: {departmentsError.message}
+                      </div>
+                    )}
+                  </FormItem>
+
+                  <FormItem
+                    label="Warranty Date"
+                  >
+                    <DatePicker
+                      placeholder="Select warranty date"
+                      value={values.warrantyDate}
+                      onChange={(date) => setFieldValue('warrantyDate', date)}
+                    />
+                  </FormItem>
+
+                  <FormItem
+                    label="Compliance Status"
+                  >
+                    <Checkbox
+                      name="complianceStatus"
+                      checked={values.complianceStatus}
+                      onChange={(val) => setFieldValue('complianceStatus', val)}
+                    >
+                      Compliant
+                    </Checkbox>
+                  </FormItem>
+
+                  <FormItem
+                    label="Notes"
+                  >
+                    <Field
+                      as="textarea"
+                      name="notes"
+                      placeholder="Additional notes"
+                      className="w-full h-20 p-2 border rounded"
+                    />
+                  </FormItem>
                 </div>
 
                 <div className="flex justify-end gap-2 mt-4">

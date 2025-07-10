@@ -1,32 +1,30 @@
 import ApiService from './ApiService';
 
 interface Product {
-  id: string;
+  id: number;
   name: string;
   model: string;
-  serialNumber?: string;
-  categoryId: string;
-  totalStock: number;
-  availableStock: number;
-  branchId: string;
+  categoryId: number;
+  branchId: number;
   warrantyDate?: string;
   complianceStatus: boolean;
   notes?: string;
+  assignments?: Assignment[];
 }
 
 interface Assignment {
-  id: string;
-  productId: string;
-  employeeId: string;
-  assignedBy: string;
+  id: number;
+  productId: number;
+  employeeId: number;
+  assignedById: number;
   assignedAt: string;
   returnedAt?: string;
-  status: 'assigned' | 'returned' | 'lost' | 'damaged';
-  condition?: 'excellent' | 'good' | 'fair' | 'poor';
+  expectedReturnAt?: string;
+  status: 'ASSIGNED' | 'RETURNED' | 'LOST' | 'DAMAGED';
+  condition?: 'EXCELLENT' | 'GOOD' | 'FAIR' | 'POOR';
   notes?: string;
 }
 
-// Product-related API calls
 export const apiGetProducts = async (params?: Record<string, any>) => {
   return ApiService.fetchData({
     url: '/products',
@@ -34,35 +32,30 @@ export const apiGetProducts = async (params?: Record<string, any>) => {
     params
   });
 };
+export const apiGetAssignedProducts = async (params?: Record<string, any>) => {
+  return ApiService.fetchData({
+    url: '/products/assigned',
+    method: 'get',
+    params
+  });
+};
 
-export const apiGetProductById = async (productId: string) => {
+export const apiGetProductById = async (productId: number) => {
   return ApiService.fetchData({
     url: `/products/${productId}`,
     method: 'get'
   });
 };
-// In your ProductService.ts
-export const apiCreateProduct = async (data: any) => {
-    try {
-      const response = await ApiService.fetchData({
-        url: '/products',
-        method: 'post',
-        data,
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      console.log('Create Product Response:', response); // Debug log
-      
-      return response.data;
-    } catch (error: any) {
-      console.error('Create Product Error:', error.response?.data || error.message);
-      throw error;
-    }
-  };
 
-export const apiUpdateProduct = async (productId: string, data: Partial<Product>) => {
+export const apiCreateProduct = async (data: Omit<Product, 'id'>) => {
+  return ApiService.fetchData({
+    url: '/products',
+    method: 'post',
+    data
+  });
+};
+
+export const apiUpdateProduct = async (productId: number, data: Partial<Product>) => {
   return ApiService.fetchData({
     url: `/products/${productId}`,
     method: 'put',
@@ -70,37 +63,17 @@ export const apiUpdateProduct = async (productId: string, data: Partial<Product>
   });
 };
 
-export const apiDeleteProduct = async (productId: string) => {
+export const apiDeleteProduct = async (productId: number) => {
   return ApiService.fetchData({
     url: `/products/${productId}`,
     method: 'delete'
   });
 };
-export const apiGetProductStockHistory = async (productId: string) => {
-    return ApiService.fetchData({
-      url: `/products/${productId}/history`,
-      method: 'get'
-    });
-  };
-export const apiUpdateStock = async (productId: string, adjustment: number) => {
-  return ApiService.fetchData({
-    url: `/products/${productId}/stock`,
-    method: 'post',
-    data: { adjustment }
-  });
-};
 
-export const apiGetAvailableProducts = async () => {
-  return ApiService.fetchData({
-    url: '/products/available',
-    method: 'get'
-  });
-};
-
-// Assignment-related API calls
 export const apiAssignProduct = async (data: {
-  productId: string;
-  employeeId: string;
+  productId: number;
+  employeeId: number;
+  expectedReturnAt?: string;
   notes?: string;
 }) => {
   return ApiService.fetchData({
@@ -110,19 +83,8 @@ export const apiAssignProduct = async (data: {
   });
 };
 
-export const apiBulkAssignProducts = async (data: {
-  employeeId: string;
-  productIds: string[];
-}) => {
-  return ApiService.fetchData({
-    url: '/product-assignments/assign/bulk',
-    method: 'post',
-    data
-  });
-};
-
-export const apiReturnProduct = async (assignmentId: string, data?: {
-  condition?: string;
+export const apiReturnProduct = async (assignmentId: number, data?: {
+  condition?: 'EXCELLENT' | 'GOOD' | 'FAIR' | 'POOR';
   notes?: string;
 }) => {
   return ApiService.fetchData({
@@ -132,12 +94,13 @@ export const apiReturnProduct = async (assignmentId: string, data?: {
   });
 };
 
-export const apiUpdateAssignment = async (assignmentId: string, data: Partial<Assignment>) => {
-  return ApiService.fetchData({
-    url: `/product-assignments/${assignmentId}`,
-    method: 'put',
-    data
+export const apiGetProductAssignments = async (productId: number) => {
+  const d = await ApiService.fetchData({
+    url: `/product-assignments/product/${productId}`,
+    method: 'get'
   });
+  console.log("d", d);
+  return d;
 };
 
 export const apiGetActiveAssignments = async () => {
@@ -146,43 +109,29 @@ export const apiGetActiveAssignments = async () => {
     method: 'get'
   });
 };
-
-export const apiGetAssignmentHistory = async (params?: {
-  productId?: string;
-  status?: string;
-  fromDate?: string;
-  toDate?: string;
-}) => {
+export const apiGetAssignmentHistory = async () => {
   return ApiService.fetchData({
     url: '/product-assignments/history',
-    method: 'get',
-    params
+    method: 'get'
   });
 };
 
-export const apiGetProductAssignments = async (productId: string) => {
-    return ApiService.fetchData({
-      url: `/product-assignments/product/${productId}`,
-      method: 'get',
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    });
-  };
-// Export all API functions
+export const apiGenerateProductQrCode = async (productId: number) => {
+  const response = await ApiService.fetchData({
+    url: `/products/${productId}/generate-qr`,
+    method: 'post'
+  });
+  return response.data.qrCodeData;
+};
+
 export default {
   apiGetProducts,
   apiGetProductById,
   apiCreateProduct,
   apiUpdateProduct,
   apiDeleteProduct,
-  apiUpdateStock,
-  apiGetAvailableProducts,
   apiAssignProduct,
-  apiBulkAssignProducts,
   apiReturnProduct,
-  apiUpdateAssignment,
-  apiGetActiveAssignments,
-  apiGetAssignmentHistory,
-  apiGetProductAssignments
+  apiGetProductAssignments,
+  apiGetActiveAssignments
 };

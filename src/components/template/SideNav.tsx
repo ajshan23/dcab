@@ -86,7 +86,7 @@ const SideNav = () => {
                         !sideNavCollapse && 'side-nav-expand',
                     )}
                 >
-                    <div className="side-nav-header">
+                    <div className="side-nav-header flex align-center justify-center">
                         <Logo
                             mode={logoMode()}
                             type={sideNavCollapse ? 'streamline' : 'full'}

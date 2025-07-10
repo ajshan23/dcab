@@ -104,6 +104,13 @@ export const apiGetUser = async (id: string) => {
     });
 };
 
+export const apiGetMe = async (id: string) => {
+    return ApiService.fetchData({
+        url: `/users/me`,
+        method: 'get'
+    });
+};
+
 export const apiUpdateUser = async (id: string, data: any) => {
     return ApiService.fetchData({
         url: `/auth/${id}`,
