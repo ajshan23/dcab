@@ -1,118 +1,99 @@
 import { useState, useMemo, useRef } from 'react';
 import DataTable from '@/components/shared/DataTable';
-import { HiOutlineEye, HiOutlinePencil, HiOutlineUserAdd, HiOutlineRefresh } from 'react-icons/hi';
-import useThemeClass from '@/utils/hooks/useThemeClass';
+import { HiOutlineEye, HiOutlineRefresh } from 'react-icons/hi';
 import { useNavigate } from 'react-router-dom';
 import type { DataTableResetHandle, ColumnDef } from '@/components/shared/DataTable';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import debounce from 'lodash/debounce';
 import Input from '@/components/ui/Input';
-import { 
-  apiGetProducts, 
-  apiAssignProduct,
-  apiReturnProduct,
-  apiGetAssignedProducts
-} from '@/services/ProductService';
-import { apiGetEmployees } from '@/services/EmployeeService.ts';
-import type { ApiResponse } from '@/@types';
+import { apiGetActiveAssignments, apiReturnProduct } from '@/services/ProductService';
 import Badge from '@/components/ui/Badge';
-import { Button, Select, Dialog, Notification, toast, DatePicker } from '@/components/ui';
+import { Button, Dialog, Notification, toast, Select } from '@/components/ui';
 import { HiOutlineCheckCircle } from 'react-icons/hi';
 import { MdAssignmentReturn } from 'react-icons/md';
 
-const ProductAssignedTable = () => {
+interface Assignment {
+  id: number;
+  assignedAt: string;
+  expectedReturnAt?: string;
+  status: string;
+  returnedAt?: string;
+  condition?: string;
+  notes?: string;
+  product: {
+    id: number;
+    name: string;
+    model: string;
+    category: {
+      id: number;
+      name: string;
+    };
+    branch: {
+      id: number;
+      name: string;
+    };
+  };
+  employee: {
+    id: number;
+    name: string;
+    empId: string;
+  };
+  assignedBy: {
+    id: number;
+    username: string;
+  };
+}
+
+const AssignmentListTable = () => {
   const tableRef = useRef<DataTableResetHandle>(null);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { textTheme } = useThemeClass();
   
+  // State management
   const [searchTerm, setSearchTerm] = useState('');
-  const [pagination, setPagination] = useState({
-    page: 1,
-    limit: 10,
+  const [pagination, setPagination] = useState({ page: 1, limit: 10 });
+  const [returnDialog, setReturnDialog] = useState({
+    open: false,
+    assignment: null as { id: number; productName: string } | null,
+    condition: 'GOOD' as 'EXCELLENT' | 'GOOD' | 'FAIR' | 'POOR'
   });
-  const [assignDialogOpen, setAssignDialogOpen] = useState(false);
-  const [returnDialogOpen, setReturnDialogOpen] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<{
-    id: number;
-    name: string;
-  } | null>(null);
-  const [selectedAssignment, setSelectedAssignment] = useState<{
-    id: number;
-    productName: string;
-  } | null>(null);
-  const [selectedEmployee, setSelectedEmployee] = useState<number | null>(null);
-  const [expectedReturnDate, setExpectedReturnDate] = useState<Date | null>(null);
-  const [notes, setNotes] = useState('');
-  const [returnCondition, setReturnCondition] = useState<'EXCELLENT' | 'GOOD' | 'FAIR' | 'POOR'>('GOOD');
 
+  // Data fetching
   const { 
-    data: productsResponse, 
+    data: assignmentsResponse, 
     isLoading, 
     error,
     refetch
-  } = useQuery<ApiResponse<any>>({
-    queryKey: ['products', pagination, searchTerm],
-    queryFn: () => apiGetAssignedProducts({
+  } = useQuery({
+    queryKey: ['active-assignments', pagination, searchTerm],
+    queryFn: () => apiGetActiveAssignments({
       page: pagination.page,
       limit: pagination.limit,
       search: searchTerm,
-      includeAssignments: true // Ensure backend includes assignments
     }),
   });
 
-  const { data: employeesResponse } = useQuery<ApiResponse<any>>({
-    queryKey: ['employees-for-assignment'],
-    queryFn: () => apiGetEmployees({ 
-      page: 1, 
-      limit: 100,
-      status: 'active'
-    })
-  });
-
-  const assignMutation = useMutation({
-    mutationFn: apiAssignProduct,
-    onSuccess: () => {
-      toast.push(
-        <Notification title="Success" type="success">
-          Product assigned successfully
-        </Notification>
-      );
-      queryClient.invalidateQueries(['products']);
-      resetAssignmentForm();
-    },
-    onError: (error: any) => {
-      toast.push(
-        <Notification title="Error" type="danger">
-          {error.response?.data?.message || 'Failed to assign product'}
-        </Notification>
-      );
-    }
-  });
-
+  // Mutations
   const returnMutation = useMutation({
-    mutationFn: (data: {assignmentId: number, condition?: string, notes?: string}) => 
+    mutationFn: (data: { assignmentId: number, condition?: string, notes?: string }) => 
       apiReturnProduct(data.assignmentId, {
         condition: data.condition,
         notes: data.notes
       }),
     onSuccess: () => {
-      toast.push(
-        <Notification title="Success" type="success">
-          Product returned successfully
-        </Notification>
-      );
-      queryClient.invalidateQueries(['products']);
-      resetReturnForm();
+      showNotification('Product returned successfully', 'success');
+      queryClient.invalidateQueries(['active-assignments']);
+      resetReturnDialog();
     },
     onError: (error: any) => {
-      toast.push(
-        <Notification title="Error" type="danger">
-          {error.response?.data?.message || 'Failed to return product'}
-        </Notification>
-      );
+      showNotification(error.response?.data?.message || 'Failed to return product', 'danger');
     }
   });
+
+  // Helper functions
+  const showNotification = (message: string, type: 'success' | 'danger') => {
+    toast.push(<Notification title={type === 'success' ? 'Success' : 'Error'} type={type}>{message}</Notification>);
+  };
 
   const debouncedSearch = useMemo(
     () => debounce((value: string) => {
@@ -122,143 +103,115 @@ const ProductAssignedTable = () => {
     []
   );
 
-  const resetAssignmentForm = () => {
-    setSelectedProduct(null);
-    setSelectedEmployee(null);
-    setExpectedReturnDate(null);
-    setNotes('');
-    setAssignDialogOpen(false);
-  };
-
-  const resetReturnForm = () => {
-    setSelectedAssignment(null);
-    setReturnCondition('GOOD');
-    setReturnDialogOpen(false);
-  };
-
-  const handleAssignClick = (product: any) => {
-    setSelectedProduct({
-      id: product.id,
-      name: product.name
+  const resetReturnDialog = () => {
+    setReturnDialog({
+      open: false,
+      assignment: null,
+      condition: 'GOOD'
     });
-    setAssignDialogOpen(true);
   };
 
-  const handleReturnClick = (assignment: any) => {
-    setSelectedAssignment({
-      id: assignment.id,
-      productName: assignment.product?.name || 'Unknown Product'
-    });
-    setReturnDialogOpen(true);
-  };
-
-  const handleAssignSubmit = async () => {
-    if (!selectedProduct || !selectedEmployee) return;
-    
-    await assignMutation.mutateAsync({
-      productId: selectedProduct.id,
-      employeeId: selectedEmployee,
-      expectedReturnAt: expectedReturnDate?.toISOString(),
-      notes
+  const handleReturnClick = (assignment: Assignment) => {
+    setReturnDialog({
+      ...returnDialog,
+      open: true,
+      assignment: {
+        id: assignment.id,
+        productName: assignment.product.name
+      }
     });
   };
 
   const handleReturnSubmit = async () => {
-    if (!selectedAssignment?.id) {
-      toast.push(
-        <Notification title="Error" type="danger">
-          No valid assignment selected
-        </Notification>
-      );
+    if (!returnDialog.assignment?.id) {
+      showNotification('No valid assignment selected', 'danger');
       return;
     }
     
     await returnMutation.mutateAsync({
-      assignmentId: selectedAssignment.id,
-      condition: returnCondition,
-      notes: `Returned in ${returnCondition.toLowerCase()} condition`
+      assignmentId: returnDialog.assignment.id,
+      condition: returnDialog.condition,
+      notes: `Returned in ${returnDialog.condition.toLowerCase()} condition`
     });
   };
 
-  const employeeOptions = useMemo(() => {
-    return employeesResponse?.data?.data?.map((emp: any) => ({
-      value: emp.id,
-      label: `${emp.name} (${emp.empId})`
-    })) || [];
-  }, [employeesResponse]);
-
-  const columns: ColumnDef<any>[] = useMemo(() => [
+  const columns: ColumnDef<Assignment>[] = useMemo(() => [
     {
       header: 'Product',
-      accessorKey: 'name',
       cell: (props) => (
-        <span className="font-semibold">{props.row.original.name}</span>
+        <div>
+          <span className="font-semibold block">{props.row.original.product.name}</span>
+          <span className="text-xs text-gray-500">{props.row.original.product.model}</span>
+        </div>
       ),
     },
     {
-      header: 'Model',
-      accessorKey: 'model',
+      header: 'Category',
+      cell: (props) => props.row.original.product.category.name,
+    },
+    {
+      header: 'Branch',
+      cell: (props) => props.row.original.product.branch.name,
+    },
+    {
+      header: 'Assigned To',
+      cell: (props) => (
+        <div>
+          <span className="block">{props.row.original.employee.name}</span>
+          <span className="text-xs text-gray-500">{props.row.original.employee.empId}</span>
+        </div>
+      ),
+    },
+    {
+      header: 'Assigned By',
+      cell: (props) => props.row.original.assignedBy.username,
+    },
+    {
+      header: 'Assigned At',
+      cell: (props) => new Date(props.row.original.assignedAt).toLocaleDateString(),
+    },
+    {
+      header: 'Expected Return',
+      cell: (props) => (
+        props.row.original.expectedReturnAt 
+          ? new Date(props.row.original.expectedReturnAt).toLocaleDateString()
+          : '-'
+      ),
     },
     {
       header: 'Status',
-      cell: (props) => {
-        const product = props.row.original;
-        const isAssigned = product.assignments?.some?.(
-          (a: any) => a.status === 'ASSIGNED' && !a.returnedAt
-        );
-        
-        return (
-          <Badge className={isAssigned ? 'w-fit bg-blue-500 text-white' : 'w-fit bg-emerald-500 text-white'}>
-            {isAssigned ? 'Assigned' : 'Available'}
-          </Badge>
-        );
-      },
+      cell: (props) => (
+        <Badge className="w-fit bg-blue-500 text-white">
+          Assigned
+        </Badge>
+      ),
     },
     {
       header: 'Actions',
       id: 'action',
       cell: (props) => {
-        const product = props.row.original;
-        const activeAssignment = product.assignments?.find?.(
-          (a: any) => a.status === 'ASSIGNED' && !a.returnedAt
-        );
-        const isAssigned = !!activeAssignment;
+        const assignment = props.row.original;
 
         return (
-          <div className="flex justify-end text-lg gap-2">
+          <div className="flex justify-end gap-2">
             <Button
               size="xs"
               icon={<HiOutlineEye />}
-              onClick={() => navigate(`/products/view/${product.id}`)}
+              onClick={() => navigate(`/products/view/${assignment.product.id}`)}
             />
             <Button
               size="xs"
-              icon={<HiOutlinePencil />}
-              onClick={() => navigate(`/products/edit/${product.id}`)}
-            />
-            {isAssigned ? (
-              <Button
-                size="xs"
-                variant="solid"
-                icon={<MdAssignmentReturn />}
-                onClick={() => handleReturnClick(activeAssignment)}
-              >
-                Return
-              </Button>
-            ) : (
-              <Button
-                size="xs"
-                icon={<HiOutlineUserAdd />}
-                onClick={() => handleAssignClick(product)}
-              >
-                Assign
-              </Button>
-            )}
+              variant="solid"
+              icon={<MdAssignmentReturn />}
+              onClick={() => handleReturnClick(assignment)}
+            >
+              Return
+            </Button>
           </div>
         );
       },
     },
-  ], [navigate, textTheme]);
+  ], [navigate]);
 
   if (error) {
     return (
@@ -274,7 +227,7 @@ const ProductAssignedTable = () => {
     <>
       <div className="flex justify-between items-center mb-4">
         <Input
-          placeholder="Search products..."
+          placeholder="Search assignments..."
           onChange={(e) => debouncedSearch(e.target.value)}
           className="max-w-md"
         />
@@ -289,10 +242,10 @@ const ProductAssignedTable = () => {
       <DataTable
         ref={tableRef}
         columns={columns}
-        data={productsResponse?.data?.data || []}
+        data={assignmentsResponse?.data?.data || []}
         loading={isLoading}
         pagingData={{
-          total: productsResponse?.data?.total || 0,
+          total: assignmentsResponse?.data?.pagination?.total || 0,
           pageIndex: pagination.page,
           pageSize: pagination.limit,
         }}
@@ -300,107 +253,43 @@ const ProductAssignedTable = () => {
         onSelectChange={(limit) => setPagination({ page: 1, limit })}
       />
 
-      {/* Assign Product Dialog */}
-      <Dialog
-        isOpen={assignDialogOpen}
-        onClose={resetAssignmentForm}
-        onRequestClose={resetAssignmentForm}
-        width={500}
-      >
-        <h4 className="mb-4">Assign Product</h4>
-        {selectedProduct && (
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-1">Product</label>
-              <p className="font-semibold">{selectedProduct.name}</p>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1">Employee</label>
-              <Select
-                placeholder="Select Employee"
-                options={employeeOptions}
-                value={selectedEmployee ? 
-                  { 
-                    value: selectedEmployee, 
-                    label: employeeOptions.find(e => e.value === selectedEmployee)?.label 
-                  } : null}
-                onChange={(option: any) => setSelectedEmployee(option?.value)}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1">Expected Return Date (Optional)</label>
-              <DatePicker
-                placeholder="Select date"
-                value={expectedReturnDate}
-                onChange={(date) => setExpectedReturnDate(date)}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1">Notes (Optional)</label>
-              <Input
-                type="text"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Additional notes"
-              />
-            </div>
-
-            <div className="flex justify-end gap-2 mt-6">
-              <Button
-                variant="plain"
-                onClick={resetAssignmentForm}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="solid"
-                onClick={handleAssignSubmit}
-                loading={assignMutation.isLoading}
-                disabled={!selectedEmployee}
-              >
-                Confirm Assignment
-              </Button>
-            </div>
-          </div>
-        )}
-      </Dialog>
-
       {/* Return Product Dialog */}
       <Dialog
-        isOpen={returnDialogOpen}
-        onClose={resetReturnForm}
-        onRequestClose={resetReturnForm}
+        isOpen={returnDialog.open}
+        onClose={resetReturnDialog}
+        onRequestClose={resetReturnDialog}
         width={400}
       >
         <h4 className="mb-4">Return Product</h4>
-        {selectedAssignment && (
+        {returnDialog.assignment && (
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium mb-1">Product</label>
-              <p className="font-semibold">{selectedAssignment.productName}</p>
+              <p className="font-semibold">{returnDialog.assignment.productName}</p>
             </div>
 
             <div>
               <label className="block text-sm font-medium mb-1">Condition</label>
               <Select
-                value={{ value: returnCondition, label: returnCondition.charAt(0).toUpperCase() + returnCondition.slice(1).toLowerCase() }}
+                value={{ 
+                  value: returnDialog.condition, 
+                  label: returnDialog.condition.charAt(0).toUpperCase() + 
+                         returnDialog.condition.slice(1).toLowerCase() 
+                }}
                 options={[
                   { value: 'EXCELLENT', label: 'Excellent' },
                   { value: 'GOOD', label: 'Good' },
                   { value: 'FAIR', label: 'Fair' },
                   { value: 'POOR', label: 'Poor' }
                 ]}
-                onChange={(option: any) => setReturnCondition(option.value)}
+                onChange={(option: any) => setReturnDialog({...returnDialog, condition: option.value})}
               />
             </div>
 
             <div className="flex justify-end gap-2 mt-6">
               <Button
                 variant="plain"
-                onClick={resetReturnForm}
+                onClick={resetReturnDialog}
               >
                 Cancel
               </Button>
@@ -420,4 +309,4 @@ const ProductAssignedTable = () => {
   );
 };
 
-export default ProductAssignedTable;
+export default AssignmentListTable;

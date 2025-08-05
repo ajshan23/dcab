@@ -1,7 +1,7 @@
 import { lazy } from 'react'
 import authRoute from './authRoute'
 import type { Routes } from '@/@types/routes'
-import { ADMIN, SUPERADMIN } from '../roles'
+import { ADMIN, SUPERADMIN, USER } from '../roles'
 
 export const publicRoutes: Routes = [...authRoute]
 
@@ -88,43 +88,43 @@ export const protectedRoutes = [
         key: 'products',
         path: '/products',
         component: lazy(() => import('@/views/products/ProductList')),
-        authority: [ADMIN,SUPERADMIN],
+        authority: [ADMIN,SUPERADMIN,USER],
     },
     {
         key: 'productsCreate',
         path: '/products/create',
         component: lazy(() => import('@/views/products/ProductCreate')),
-        authority: [ADMIN,SUPERADMIN],
+        authority: [ADMIN,SUPERADMIN,USER],
     },
     {
         key: 'productView',
         path: '/products/view/:id',
         component: lazy(() => import('@/views/products/ProductDetailsPage')),
-        authority: [ADMIN,SUPERADMIN],
+        authority: [ADMIN,SUPERADMIN,USER],
     },
     {
         key: 'productsEdit',
         path: '/products/edit/:id',
         component: lazy(() => import('@/views/products/ProductEdit')),
-        authority: [ADMIN,SUPERADMIN],
+        authority: [ADMIN,SUPERADMIN,USER],
     },
     {
         key: 'productAssignments',
         path: '/assignments',
         component: lazy(() => import('@/views/products/ProductAssignedList')),
-        authority: [ADMIN,SUPERADMIN],
+        authority: [ADMIN,SUPERADMIN,USER],
     },
     {
         key: 'productAssignmentHistory',
         path: '/product-assignments/history/:productId?',
         component: lazy(() => import('@/views/products/ProductAssignmentHistory')),
-        authority: [ADMIN,SUPERADMIN],
+        authority: [ADMIN,SUPERADMIN,USER],
     },
     {
         key: 'productAssignmentHistory',
         path: '/assignments/:id?',
         component: lazy(() => import('@/views/products/AssignmentList')),
-        authority: [ADMIN,SUPERADMIN],
+        authority: [ADMIN,SUPERADMIN,USER],
         
     },{
         key: 'departmentList',

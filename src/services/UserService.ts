@@ -21,7 +21,7 @@ interface CreateUserResponse {
 export const apiCreateUser = async (data: CreateUserPayload): Promise<CreateUserResponse> => {
     try {
         const response = await ApiService.fetchData<CreateUserResponse>({
-            url: '/auth',
+            url: '/auth/register',
             method: 'post',
             data
         })

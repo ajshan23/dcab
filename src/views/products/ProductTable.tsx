@@ -19,6 +19,38 @@ import { Button, Select, Dialog, Notification, toast, DatePicker } from '@/compo
 import { HiOutlineCheckCircle } from 'react-icons/hi';
 import { MdAssignmentReturn } from 'react-icons/md';
 
+interface Product {
+  id: number;
+  name: string;
+  model: string;
+  isAssigned: boolean;
+  currentAssignment: {
+    id: number;
+    assignedAt: string;
+    expectedReturnAt?: string;
+    employee: {
+      id: number;
+      name: string;
+      empId: string;
+    };
+  } | null;
+  category: {
+    id: number;
+    name: string;
+  };
+  branch: {
+    id: number;
+    name: string;
+  };
+  department?: {
+    id: number;
+    name: string;
+  };
+  warrantyDate?: string;
+  complianceStatus: boolean;
+  createdAt: string;
+}
+
 const ProductTable = () => {
   const tableRef = useRef<DataTableResetHandle>(null);
   const navigate = useNavigate();
@@ -50,13 +82,12 @@ const ProductTable = () => {
     isLoading, 
     error,
     refetch
-  } = useQuery<ApiResponse<any>>({
+  } = useQuery<ApiResponse<Product[]>>({
     queryKey: ['products', pagination, searchTerm],
     queryFn: () => apiGetProducts({
       page: pagination.page,
       limit: pagination.limit,
       search: searchTerm,
-      includeAssignments: true // Ensure backend includes assignments
     }),
   });
 
@@ -135,7 +166,7 @@ const ProductTable = () => {
     setReturnDialogOpen(false);
   };
 
-  const handleAssignClick = (product: any) => {
+  const handleAssignClick = (product: Product) => {
     setSelectedProduct({
       id: product.id,
       name: product.name
@@ -143,10 +174,12 @@ const ProductTable = () => {
     setAssignDialogOpen(true);
   };
 
-  const handleReturnClick = (assignment: any) => {
+  const handleReturnClick = (assignment: Product['currentAssignment']) => {
+    if (!assignment) return;
+    
     setSelectedAssignment({
       id: assignment.id,
-      productName: assignment.product?.name || 'Unknown Product'
+      productName: selectedProduct?.name || 'Unknown Product'
     });
     setReturnDialogOpen(true);
   };
@@ -186,7 +219,7 @@ const ProductTable = () => {
     })) || [];
   }, [employeesResponse]);
 
-  const columns: ColumnDef<any>[] = useMemo(() => [
+  const columns: ColumnDef<Product>[] = useMemo(() => [
     {
       header: 'Product',
       accessorKey: 'name',
@@ -199,13 +232,24 @@ const ProductTable = () => {
       accessorKey: 'model',
     },
     {
+      header: 'Assigned To',
+      cell: (props) => {
+        const assignment = props.row.original.currentAssignment;
+        if (!assignment) return '-';
+        return (
+          <div className="flex flex-col">
+            <span>{assignment.employee.name}</span>
+            <span className="text-xs text-gray-500">
+              {assignment.employee.empId}
+            </span>
+          </div>
+        );
+      },
+    },
+    {
       header: 'Status',
       cell: (props) => {
-        const product = props.row.original;
-        const isAssigned = product.assignments?.some?.(
-          (a: any) => a.status === 'ASSIGNED' && !a.returnedAt
-        );
-        
+        const isAssigned = props.row.original.isAssigned;
         return (
           <Badge className={isAssigned ? 'w-fit bg-blue-500 text-white' : 'w-fit bg-emerald-500 text-white'}>
             {isAssigned ? 'Assigned' : 'Available'}
@@ -218,10 +262,8 @@ const ProductTable = () => {
       id: 'action',
       cell: (props) => {
         const product = props.row.original;
-        const activeAssignment = product.assignments?.find?.(
-          (a: any) => a.status === 'ASSIGNED' && !a.returnedAt
-        );
-        const isAssigned = !!activeAssignment;
+        const isAssigned = product.isAssigned;
+        const currentAssignment = product.currentAssignment;
 
         return (
           <div className="flex justify-end text-lg gap-2">
@@ -240,7 +282,7 @@ const ProductTable = () => {
                 size="xs"
                 variant="solid"
                 icon={<MdAssignmentReturn />}
-                onClick={() => handleReturnClick(activeAssignment)}
+                onClick={() => currentAssignment && handleReturnClick(currentAssignment)}
               >
                 Return
               </Button>

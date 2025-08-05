@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
 import Avatar from '@/components/ui/Avatar'
 import Badge from '@/components/ui/Badge'
 import DataTable from '@/components/shared/DataTable'
@@ -19,6 +19,12 @@ interface User {
     role: string
     createdAt: string
     updatedAt: string
+}
+
+interface CurrentUser {
+    role: string
+    name: string
+    email: string
 }
 
 const userRoleColor = {
@@ -47,6 +53,19 @@ const UserTable = () => {
         page: 1,
         limit: 10,
     })
+    const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null)
+
+    // Get current user from localStorage on component mount
+    useEffect(() => {
+        const userData = localStorage.getItem('user')
+        if (userData) {
+            try {
+                setCurrentUser(JSON.parse(userData))
+            } catch (error) {
+                console.error('Error parsing user data:', error)
+            }
+        }
+    }, [])
 
     const { data, isLoading, error } = useQuery<ApiResponse<{ 
         data: User[]
@@ -107,25 +126,34 @@ const UserTable = () => {
             id: 'action',
             cell: (props) => {
                 const { textTheme } = useThemeClass()
+                const user = props.row.original
+                const isSuperAdmin = user.role === 'super_admin'
+                const canEditSuperAdmin = currentUser?.role === 'super_admin'
+
                 return (
                     <div className="flex justify-end text-lg">
                         <span
                             className={`cursor-pointer p-2 hover:${textTheme}`}
-                            onClick={() => navigate(`/users/view/${props.row.original.id}`)}
+                            onClick={() => navigate(`/users/view/${user.id}`)}
                         >
                             <HiOutlineEye />
                         </span>
-                        <span
-                            className={`cursor-pointer p-2 hover:${textTheme}`}
-                            onClick={() => navigate(`/users/edit/${props.row.original.id}`)}
-                        >
-                            <HiOutlinePencil />
-                        </span>
+                        {/* Only show edit button if:
+                            1. The user is not a super admin OR
+                            2. The current user is a super admin */}
+                        {(!isSuperAdmin || canEditSuperAdmin) && (
+                            <span
+                                className={`cursor-pointer p-2 hover:${textTheme}`}
+                                onClick={() => navigate(`/users/edit/${user.id}`)}
+                            >
+                                <HiOutlinePencil />
+                            </span>
+                        )}
                     </div>
                 )
             },
         },
-    ], [navigate])
+    ], [navigate, currentUser])
 
     if (error) {
         return (

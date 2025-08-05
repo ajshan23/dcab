@@ -1,79 +1,78 @@
 import ApiService from './ApiService'
 import { formatDistanceToNow } from 'date-fns'
 
-interface DashboardData {
-  productCount: number
-  productOverview: {
+export interface DashboardData {
+  summary: {
+    products: number
     assigned: number
-    available: number
-    total: number
-    weeklyTrend: {
-      series: Array<{ name: string; data: number[] }>
-      categories: string[]
-    }
+    categories: number
+    branches: number
+    employees: number
   }
-  recentAssignments?: Array<{
-    id: string
-    name: string
-    assignedTo: string
-    date: string
-    status: string
+  weeklyTrend: Array<{
+    day: string
+    assignments: number
   }>
-  categoryStats?: Array<{
-    name: string
-    total: number
-    assigned: number
-    available: number
+  recentActivities: Array<{
+    id: number
+    product: {
+      name: string
+    }
+    employee: {
+      name: string
+    }
+    assignedAt: string
   }>
-  recentActivity?: Array<{
-    id: string
-    action: string
-    timestamp: string
+  categoryDistribution: Array<{
+    name: string
+    _count: {
+      products: number
+    }
   }>
 }
 
 export const apiGetDashboardData = async (): Promise<DashboardData> => {
   try {
+    console.log('Fetching dashboard data...')
     const response = await ApiService.fetchData<{ 
       success: boolean
       data?: DashboardData
       message?: string
     }>({
-      url: '/dashboard/products',
+      url: '/dashboard',
       method: 'get'
     })
 
-    // Validate response structure
+    console.log('Dashboard response:', response)
+
     if (!response.data?.success || !response.data.data) {
+      console.error('Invalid dashboard response:', response)
       throw new Error(response.data?.message || 'Invalid dashboard data format')
     }
 
-    // Safely handle all array properties
-    const baseData = response.data.data
-    const recentActivity = baseData.recentActivity || []
-    const recentAssignments = baseData.recentAssignments || []
-    const categoryStats = baseData.categoryStats || []
-    const weeklyTrendSeries = baseData.productOverview.weeklyTrend.series || []
-    const weeklyTrendCategories = baseData.productOverview.weeklyTrend.categories || []
+    const { data } = response.data
 
     return {
-      ...baseData,
-      productOverview: {
-        ...baseData.productOverview,
-        weeklyTrend: {
-          series: weeklyTrendSeries,
-          categories: weeklyTrendCategories
-        }
+      summary: data.summary || {
+        products: 0,
+        assigned: 0,
+        categories: 0,
+        branches: 0,
+        employees: 0
       },
-      recentActivity: recentActivity.map(activity => ({
+      weeklyTrend: data.weeklyTrend || [],
+      recentActivities: (data.recentActivities || []).map(activity => ({
         ...activity,
-        timestamp: formatDistanceToNow(new Date(activity.timestamp)) + ' ago'
+        assignedAt: formatDistanceToNow(new Date(activity.assignedAt)) + ' ago'
       })),
-      recentAssignments,
-      categoryStats
+      categoryDistribution: data.categoryDistribution || []
     }
   } catch (error: any) {
-    console.error('DashboardService Error:', error)
+    console.error('Detailed dashboard error:', {
+      message: error.message,
+      response: error.response?.data,
+      stack: error.stack
+    })
     throw new Error(
       error.response?.data?.message ||
       error.message ||

@@ -121,7 +121,14 @@ export const apiGenerateProductQrCode = async (productId: number) => {
     url: `/products/${productId}/generate-qr`,
     method: 'post'
   });
-  return response.data.qrCodeData;
+    console.log(response);
+    
+  // Ensure the response has the expected structure
+  if (!response || !response.data?.qrCode) {
+    throw new Error('Invalid response from server');
+  }
+  
+  return response.data;
 };
 
 export default {

@@ -38,7 +38,8 @@ const ProductEdit = () => {
     data: productResponse, 
     isLoading: productLoading,
     error: productError,
-    isError: isProductError
+    isError: isProductError,
+    isSuccess: isProductSuccess
   } = useQuery({
     queryKey: ['product', id],
     queryFn: () => apiGetProductById(Number(id)),
@@ -110,10 +111,10 @@ const ProductEdit = () => {
       model: values.model.trim(),
       categoryId: Number(values.categoryId),
       branchId: Number(values.branchId),
-      departmentId: values.departmentId ? Number(values.departmentId) : null,
-      warrantyDate: values.warrantyDate || null,
+      departmentId: values.departmentId ? Number(values.departmentId) : undefined,
+      warrantyDate: values.warrantyDate || undefined,
       complianceStatus: Boolean(values.complianceStatus),
-      notes: values.notes?.trim() || null
+      notes: values.notes?.trim() || undefined
     };
 
     updateMutation.mutate(payload);
@@ -140,9 +141,9 @@ const ProductEdit = () => {
     return {
       name: product.name || '',
       model: product.model || '',
-      categoryId: product.categoryId?.toString() || '',
-      branchId: product.branchId?.toString() || '',
-      departmentId: product.departmentId?.toString() || '',
+      categoryId: product.category?.id || '',
+      branchId: product.branch?.id || '',
+      departmentId: product.department?.id || '',
       warrantyDate: product.warrantyDate ? new Date(product.warrantyDate) : null,
       complianceStatus: product.complianceStatus || false,
       notes: product.notes || ''
@@ -242,12 +243,12 @@ const ProductEdit = () => {
                       placeholder={categoriesLoading ? "Loading..." : "Select Category"}
                       loading={categoriesLoading}
                       options={categories.map((c: any) => ({
-                        value: c.id.toString(),
+                        value: c.id,
                         label: c.name
                       }))}
                       value={values.categoryId ? {
                         value: values.categoryId,
-                        label: categories.find((c: any) => c.id.toString() === values.categoryId)?.name
+                        label: categories.find((c: any) => c.id === Number(values.categoryId))?.name
                       } : null}
                       onChange={(option: any) => setFieldValue('categoryId', option?.value)}
                     />
@@ -267,12 +268,12 @@ const ProductEdit = () => {
                       placeholder={branchesLoading ? "Loading..." : "Select Branch"}
                       loading={branchesLoading}
                       options={branches.map((b: any) => ({
-                        value: b.id.toString(),
+                        value: b.id,
                         label: b.name
                       }))}
                       value={values.branchId ? {
                         value: values.branchId,
-                        label: branches.find((b: any) => b.id.toString() === values.branchId)?.name
+                        label: branches.find((b: any) => b.id === Number(values.branchId))?.name
                       } : null}
                       onChange={(option: any) => setFieldValue('branchId', option?.value)}
                     />
@@ -290,12 +291,12 @@ const ProductEdit = () => {
                       placeholder={departmentsLoading ? "Loading..." : "Select Department (Optional)"}
                       loading={departmentsLoading}
                       options={departments.map((d: any) => ({
-                        value: d.id.toString(),
+                        value: d.id,
                         label: d.name
                       }))}
                       value={values.departmentId ? {
                         value: values.departmentId,
-                        label: departments.find((d: any) => d.id.toString() === values.departmentId)?.name
+                        label: departments.find((d: any) => d.id === Number(values.departmentId))?.name
                       } : null}
                       onChange={(option: any) => setFieldValue('departmentId', option?.value)}
                       isClearable

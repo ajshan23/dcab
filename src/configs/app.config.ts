@@ -8,7 +8,7 @@ export type AppConfig = {
 }
 
 const appConfig: AppConfig = {
-    apiPrefix: 'https://dca.ksa-sc.com/api',
+    apiPrefix: 'http://localhost:3001/api',
     authenticatedEntryPath: '/home',
     unAuthenticatedEntryPath: '/sign-in',
     tourPath: '/',
@@ -17,3 +17,4 @@ const appConfig: AppConfig = {
 }
 
 export default appConfig
+//https://dca.ksa-sc.com

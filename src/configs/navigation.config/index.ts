@@ -4,7 +4,7 @@ import {
     NAV_ITEM_TYPE_COLLAPSE,
 } from '@/constants/navigation.constant'
 import type { NavigationTree } from '@/@types/navigation'
-import { ADMIN, SUPERADMIN } from '../roles'
+import { ADMIN, SUPERADMIN, USER } from '../roles'
 
 const navigationConfig: NavigationTree[] = [
     {
@@ -24,7 +24,7 @@ const navigationConfig: NavigationTree[] = [
         translateKey: 'nav.products',
         icon: 'products',
         type: NAV_ITEM_TYPE_ITEM,
-        authority: [SUPERADMIN, ADMIN],
+        authority: [SUPERADMIN, ADMIN,USER],
         subMenu: [],
     },
     {
@@ -34,7 +34,7 @@ const navigationConfig: NavigationTree[] = [
         translateKey: 'nav.assignments',
         icon: 'assignments',
         type: NAV_ITEM_TYPE_ITEM,
-        authority: [SUPERADMIN, ADMIN],
+        authority: [SUPERADMIN, ADMIN,USER],
         subMenu: [],
     },
     {
